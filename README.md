@@ -1,3 +1,5 @@
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/e77d4c32-4334-45f5-80d9-9b2ade62a0a7" />
+
 # 🔔 SynapseNotify v1.0
 
 **Push Notification System for AI Agents**
@@ -410,6 +412,9 @@ Contributions welcome! Please:
 MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
+
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/1b91b6c1-e3d2-4459-8c88-577b72d0db94" />
+
 
 ## 📝 Credits
 
