@@ -42,6 +42,12 @@ Show All Agents Status:
 Test Terminal Bell:
   python synapsenotify.py bell
 
+Sync Tool Requests (for auto-prompt):
+  python synapsenotify.py sync-requests
+
+Show Pending Tool Requests:
+  python synapsenotify.py pending-requests
+
 ================================================================================
 PYTHON API
 --------------------------------------------------------------------------------
@@ -162,6 +168,22 @@ def on_new_message(message_path):
     notifier = SynapseNotify()
     alerts = notifier.create_alerts_from_synapse_message(message_path)
     print(f"[ALERT] Created {len(alerts)} alert(s)")
+
+================================================================================
+AUTO-PROMPT INTEGRATION
+--------------------------------------------------------------------------------
+
+The auto-prompt (4 AM & 12 PM) calls sync-requests automatically.
+
+How it works:
+  1. TOOL_REQUEST_*.json posted in Synapse
+  2. Auto-prompt calls: synapsenotify.py sync-requests
+  3. Request added to MASTER_TOOL_REQUEST_LOG.json (PENDING)
+  4. Auto-prompt builds PENDING requests first (Priority 0)
+
+Manual commands:
+  python synapsenotify.py sync-requests     # Sync to master log
+  python synapsenotify.py pending-requests  # View pending requests
 
 ================================================================================
 TROUBLESHOOTING
