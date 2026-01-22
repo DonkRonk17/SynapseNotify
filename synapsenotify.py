@@ -23,7 +23,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 from dataclasses import dataclass, asdict
 from enum import Enum
 
@@ -481,6 +481,133 @@ class SynapseNotify:
         return status
 
 
+class ToolRequestScanner:
+    """
+    Scans THE_SYNAPSE for TOOL_REQUEST_*.json files and syncs them
+    to MASTER_TOOL_REQUEST_LOG.json for auto-prompt detection.
+    """
+    
+    SYNAPSE_PATH = Path(r"D:\BEACON_HQ\MEMORY_CORE_V2\03_INTER_AI_COMMS\THE_SYNAPSE\active")
+    TOOL_REQUEST_LOG = Path(r"D:\BEACON_HQ\MEMORY_CORE_V2\05_PROJECT_TRACKING\TOOL_REQUESTS\MASTER_TOOL_REQUEST_LOG.json")
+    
+    def scan_and_sync(self) -> int:
+        """
+        Scan Synapse for TOOL_REQUEST_*.json files and add to master log.
+        
+        Returns:
+            Number of new pending requests added
+        """
+        # Find all TOOL_REQUEST_*.json files
+        tool_request_files = list(self.SYNAPSE_PATH.glob("TOOL_REQUEST_*.json"))
+        
+        if not tool_request_files:
+            print("[OK] No tool request files found in Synapse")
+            return 0
+        
+        # Load master log
+        try:
+            with open(self.TOOL_REQUEST_LOG, 'r', encoding='utf-8') as f:
+                master_log = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            # Create new log structure
+            master_log = {
+                "tracking_info": {
+                    "created": datetime.now().isoformat(),
+                    "last_updated": datetime.now().isoformat(),
+                    "responsible_agents": ["ATLAS", "FORGE", "CLIO"],
+                    "description": "Master tracking log for all tool requests"
+                },
+                "active_requests": [],
+                "completed_requests": [],
+                "statistics": {
+                    "total_requests": 0,
+                    "pending": 0,
+                    "in_progress": 0,
+                    "completed": 0,
+                    "cancelled": 0
+                }
+            }
+        
+        # Get existing request IDs (from both active and completed)
+        existing_msg_ids = set()
+        for req in master_log.get('active_requests', []):
+            existing_msg_ids.add(req.get('synapse_message_id', ''))
+        for req in master_log.get('completed_requests', []):
+            existing_msg_ids.add(req.get('synapse_message_id', ''))
+        
+        new_requests = 0
+        
+        for request_file in tool_request_files:
+            try:
+                with open(request_file, 'r', encoding='utf-8') as f:
+                    request = json.load(f)
+                
+                msg_id = request.get('msg_id', request_file.stem)
+                
+                # Skip if already in log
+                if msg_id in existing_msg_ids:
+                    continue
+                
+                # Extract request details
+                body = request.get('body', {})
+                
+                new_entry = {
+                    "request_id": master_log['statistics'].get('total_requests', 0) + new_requests + 1,
+                    "date_received": request.get('timestamp', datetime.now().isoformat()),
+                    "requested_by": request.get('from', 'UNKNOWN'),
+                    "synapse_message_id": msg_id,
+                    "tool_name": body.get('tool_name', request.get('subject', 'Unknown Tool')),
+                    "purpose": body.get('problem_statement', body.get('purpose', 'See Synapse message')),
+                    "priority": request.get('priority', 'NORMAL'),
+                    "details": str(body)[:500] if body else "See original Synapse message",
+                    "use_cases": body.get('success_criteria', body.get('use_cases', [])),
+                    "status": "PENDING",
+                    "assigned_to": None,
+                    "date_assigned": None,
+                    "date_completed": None,
+                    "github_url": None,
+                    "notes": f"Auto-imported from Synapse: {request_file.name}",
+                    "source_file": str(request_file)
+                }
+                
+                # Add to active requests
+                if 'active_requests' not in master_log:
+                    master_log['active_requests'] = []
+                master_log['active_requests'].append(new_entry)
+                
+                new_requests += 1
+                print(f"[OK] Added PENDING tool request: {new_entry['tool_name']}")
+                
+            except Exception as e:
+                print(f"[WARNING] Could not process {request_file.name}: {e}")
+        
+        # Update statistics
+        if new_requests > 0:
+            master_log['statistics']['total_requests'] = master_log['statistics'].get('total_requests', 0) + new_requests
+            master_log['statistics']['pending'] = len([r for r in master_log.get('active_requests', []) if r.get('status') == 'PENDING'])
+            master_log['tracking_info']['last_updated'] = datetime.now().isoformat()
+            
+            # Save updated log
+            with open(self.TOOL_REQUEST_LOG, 'w', encoding='utf-8') as f:
+                json.dump(master_log, f, indent=2, ensure_ascii=False)
+            
+            print(f"[OK] Synced {new_requests} new tool request(s) to MASTER_TOOL_REQUEST_LOG.json")
+        else:
+            print("[OK] All Synapse tool requests already in master log")
+        
+        return new_requests
+    
+    def get_pending_requests(self) -> List[Dict]:
+        """Get all pending tool requests."""
+        try:
+            with open(self.TOOL_REQUEST_LOG, 'r', encoding='utf-8') as f:
+                master_log = json.load(f)
+            
+            return [r for r in master_log.get('active_requests', []) if r.get('status') == 'PENDING']
+        except:
+            return []
+
+
 def main():
     """CLI interface for SynapseNotify."""
     
@@ -497,6 +624,8 @@ USAGE:
   synapsenotify.py alert <file>               Create alerts from Synapse message
   synapsenotify.py status                     Show all agents with pending alerts
   synapsenotify.py bell                       Test terminal bell
+  synapsenotify.py sync-requests              Sync TOOL_REQUEST_*.json to master log
+  synapsenotify.py pending-requests           Show pending tool requests
 
 EXAMPLES:
   # Check alerts at session start (recommended)
@@ -617,6 +746,28 @@ INTEGRATION:
         print("Testing terminal bell...")
         notifier._trigger_bell()
         print("[OK] Bell triggered (did you hear it?)")
+    
+    elif command == "sync-requests":
+        scanner = ToolRequestScanner()
+        count = scanner.scan_and_sync()
+        if count > 0:
+            print(f"\n[!] {count} new tool request(s) added to master log!")
+            print("[!] Auto-prompt will now find these requests")
+    
+    elif command == "pending-requests":
+        scanner = ToolRequestScanner()
+        pending = scanner.get_pending_requests()
+        
+        if not pending:
+            print("[OK] No pending tool requests")
+        else:
+            print(f"\n[!] {len(pending)} PENDING TOOL REQUEST(S):\n")
+            for req in pending:
+                print(f"  [{req.get('priority', 'NORMAL')}] {req.get('tool_name', 'Unknown')}")
+                print(f"       From: {req.get('requested_by', 'Unknown')}")
+                print(f"       Purpose: {req.get('purpose', 'N/A')[:80]}...")
+                print(f"       ID: {req.get('synapse_message_id', 'N/A')}")
+                print()
     
     else:
         print(f"[ERROR] Unknown command: {command}")

@@ -132,27 +132,32 @@ class TestSynapseNotifyCore(unittest.TestCase):
         self.notifier.create_alert(
             to_agent="ATLAS",
             from_agent="FORGE",
-            subject="Unread",
+            subject="Alert1",
             content="Test",
-            source_file="/unread.json"
+            source_file="/alert1.json"
         )
         self.notifier.create_alert(
             to_agent="ATLAS",
             from_agent="CLIO",
-            subject="Will be read",
+            subject="Alert2",
             content="Test",
-            source_file="/read.json"
+            source_file="/alert2.json"
         )
         
-        # Mark one as read
+        # Get all alerts and mark one as read
         alerts = self.notifier.get_alerts("ATLAS")
+        self.assertEqual(len(alerts), 2)
+        
+        # Mark the first one as read
+        read_subject = alerts[0].subject
         self.notifier.mark_read("ATLAS", alerts[0].id)
         
-        # Get unread only
+        # Get unread only - should have 1 remaining
         unread = self.notifier.get_alerts("ATLAS", unread_only=True)
         
         self.assertEqual(len(unread), 1)
-        self.assertEqual(unread[0].subject, "Unread")
+        # The unread one should NOT be the one we marked as read
+        self.assertNotEqual(unread[0].subject, read_subject)
     
     def test_get_alerts_by_priority(self):
         """Test filtering alerts by priority."""
