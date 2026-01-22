@@ -152,6 +152,12 @@ synapsenotify.py status
 
 # Test terminal bell
 synapsenotify.py bell
+
+# Sync TOOL_REQUEST_*.json to master log (for auto-prompt)
+synapsenotify.py sync-requests
+
+# Show pending tool requests
+synapsenotify.py pending-requests
 ```
 
 ---
@@ -413,6 +419,34 @@ MIT License - see [LICENSE](LICENSE) file for details.
 **Problem:** "SynapseWatcher detects messages but cannot truly NOTIFY AI agents"  
 **Part of:** Beacon HQ / Team Brain Ecosystem  
 **Date:** January 22, 2026
+
+---
+
+## 🔄 Auto-Prompt Integration
+
+SynapseNotify includes a **Tool Request Scanner** that syncs `TOOL_REQUEST_*.json` files from THE_SYNAPSE to `MASTER_TOOL_REQUEST_LOG.json`. This ensures the auto-prompt system (4 AM & 12 PM daily runs) finds and prioritizes tool requests.
+
+### How It Works
+
+1. Someone posts a `TOOL_REQUEST_*.json` file in THE_SYNAPSE
+2. Auto-prompt runs `synapsenotify.py sync-requests` at startup
+3. Tool request is added to `MASTER_TOOL_REQUEST_LOG.json` with status "PENDING"
+4. Auto-prompt sees the PENDING request and builds it first (Priority 0)
+
+### Manual Sync
+
+```bash
+# Sync tool requests from Synapse to master log
+python synapsenotify.py sync-requests
+
+# View pending tool requests
+python synapsenotify.py pending-requests
+```
+
+### File Locations
+
+- **Synapse Tool Requests:** `D:\BEACON_HQ\MEMORY_CORE_V2\03_INTER_AI_COMMS\THE_SYNAPSE\active\TOOL_REQUEST_*.json`
+- **Master Log:** `D:\BEACON_HQ\MEMORY_CORE_V2\05_PROJECT_TRACKING\TOOL_REQUESTS\MASTER_TOOL_REQUEST_LOG.json`
 
 ---
 
