@@ -1,0 +1,14 @@
+# SynapseNotify has ZERO external dependencies!
+# Pure Python standard library only (Python 3.7+)
+#
+# Built-in modules used:
+# - json (data serialization)
+# - pathlib (file paths)
+# - datetime (timestamps)
+# - dataclasses (Alert structure)
+# - typing (type hints)
+# - enum (Priority levels)
+# - hashlib (alert ID generation)
+# - sys, os (system operations)
+#
+# No pip install needed!

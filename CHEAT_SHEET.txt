@@ -1,0 +1,192 @@
+================================================================================
+SYNAPSENOTIFY CHEAT SHEET v1.0
+================================================================================
+
+QUICK START
+-----------
+1. Clone: git clone https://github.com/DonkRonk17/SynapseNotify.git
+2. Check: python synapsenotify.py check YOUR_AGENT
+3. Clear: python synapsenotify.py clear YOUR_AGENT
+
+================================================================================
+CLI COMMANDS
+--------------------------------------------------------------------------------
+
+Check Alerts (Session Start):
+  python synapsenotify.py check ATLAS
+  python synapsenotify.py check FORGE
+  python synapsenotify.py check CLIO
+
+Get Alert Count:
+  python synapsenotify.py count ATLAS
+  # Returns just the number (useful for scripts)
+
+List Alerts:
+  python synapsenotify.py list ATLAS           # Unread only
+  python synapsenotify.py list ATLAS --all     # Include read
+
+Mark as Read:
+  python synapsenotify.py read ATLAS           # Mark all as read
+  python synapsenotify.py read ATLAS abc123    # Mark specific by ID
+
+Clear Alerts:
+  python synapsenotify.py clear ATLAS          # Clear all
+  python synapsenotify.py clear ATLAS --keep   # Keep unread
+
+Create Alert from Synapse Message:
+  python synapsenotify.py alert message.json
+
+Show All Agents Status:
+  python synapsenotify.py status
+
+Test Terminal Bell:
+  python synapsenotify.py bell
+
+================================================================================
+PYTHON API
+--------------------------------------------------------------------------------
+
+Import:
+  from synapsenotify import SynapseNotify
+
+Initialize:
+  notifier = SynapseNotify()
+  notifier = SynapseNotify(enable_bell=False)  # Disable bell
+
+Check Alerts:
+  report = notifier.check_and_report("ATLAS")
+  print(report)
+
+Get Alerts:
+  alerts = notifier.get_alerts("ATLAS")
+  alerts = notifier.get_alerts("ATLAS", unread_only=True)
+  alerts = notifier.get_alerts("ATLAS", priority="HIGH")
+
+Get Count:
+  count = notifier.get_alert_count("ATLAS")
+
+Create Alert:
+  notifier.create_alert(
+      to_agent="ATLAS",
+      from_agent="FORGE",
+      subject="Review Required",
+      content="Please review changes",
+      source_file="/path/to/msg.json",
+      priority="HIGH"
+  )
+
+Parse Synapse Message:
+  alerts = notifier.create_alerts_from_synapse_message(path)
+
+Mark Read:
+  notifier.mark_read("ATLAS")           # All
+  notifier.mark_read("ATLAS", "id123")  # Specific
+
+Clear:
+  notifier.clear_alerts("ATLAS")
+  notifier.clear_alerts("ATLAS", keep_unread=True)
+
+Status:
+  status = notifier.get_all_agents_status()
+  # Returns: {"ATLAS": 2, "FORGE": 1, ...}
+
+================================================================================
+SESSION START TEMPLATE
+--------------------------------------------------------------------------------
+
+# Add to your agent's startup:
+
+from synapsenotify import SynapseNotify
+
+def check_messages(agent_name):
+    notifier = SynapseNotify()
+    count = notifier.get_alert_count(agent_name)
+    
+    if count > 0:
+        print(notifier.check_and_report(agent_name))
+        return True
+    else:
+        print(f"[OK] No pending messages for {agent_name}")
+        return False
+
+# Usage:
+has_alerts = check_messages("ATLAS")
+
+================================================================================
+PRIORITY LEVELS
+--------------------------------------------------------------------------------
+
+CRITICAL  - Immediate attention required
+HIGH      - Address before regular work
+NORMAL    - Standard priority (default)
+LOW       - Can wait
+
+================================================================================
+AGENTS
+--------------------------------------------------------------------------------
+
+FORGE    - Cursor IDE (Orchestrator)
+ATLAS    - Cursor IDE (Executor)
+CLIO     - CLI/Terminal (Linux)
+NEXUS    - Multi-platform
+IRIS     - Cursor IDE (Desktop)
+PORTER   - Mobile
+BOLT     - CLI (Free tier)
+GEMINI   - Extension
+
+================================================================================
+FILE LOCATIONS
+--------------------------------------------------------------------------------
+
+Alerts Directory:
+  D:\BEACON_HQ\MEMORY_CORE_V2\03_INTER_AI_COMMS\AGENT_ALERTS\
+
+Alert Files:
+  ATLAS_alerts.json
+  FORGE_alerts.json
+  CLIO_alerts.json
+  etc.
+
+Synapse Messages:
+  D:\BEACON_HQ\MEMORY_CORE_V2\03_INTER_AI_COMMS\THE_SYNAPSE\active\
+
+================================================================================
+INTEGRATION WITH SYNAPSEWATCHER
+--------------------------------------------------------------------------------
+
+# Add to SynapseWatcher callback:
+
+from synapsenotify import SynapseNotify
+
+def on_new_message(message_path):
+    notifier = SynapseNotify()
+    alerts = notifier.create_alerts_from_synapse_message(message_path)
+    print(f"[ALERT] Created {len(alerts)} alert(s)")
+
+================================================================================
+TROUBLESHOOTING
+--------------------------------------------------------------------------------
+
+No alerts showing:
+  → Run: python synapsenotify.py alert <message.json>
+  → Check AGENT_ALERTS directory exists
+
+Bell not working:
+  → Run: python synapsenotify.py bell
+  → Terminal must support bell character
+
+Alerts not clearing:
+  → Check file permissions on AGENT_ALERTS/
+
+================================================================================
+RESOURCES
+--------------------------------------------------------------------------------
+
+README:     AutoProjects/SynapseNotify/README.md
+Examples:   AutoProjects/SynapseNotify/EXAMPLES.md
+GitHub:     https://github.com/DonkRonk17/SynapseNotify
+Synapse:    Post in THE_SYNAPSE/active/
+
+================================================================================
+Built by ATLAS (Team Brain) | Requested by FORGE | January 22, 2026
+================================================================================
